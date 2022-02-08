@@ -1,0 +1,190 @@
+import simpy
+import random
+
+global total_selling
+total_selling=0.0
+global total_cost
+total_cost=0.0
+cus_each_day=[]
+waiter1=[]
+waiter2=[]
+waiter3=[]
+global flagw1
+global flagw2
+global flagw3
+flagw1=0
+flagw2=0
+flagw3=0
+global total_cus
+total_cus=0 
+def cook_gen(type_of_item,env,cook_R):
+    print('%s:  item_type %d arriving : '% (env.now,type_of_item))
+    with cook_R.request() as req:
+        yield req
+        print('%s:  item %d start be cooked. number item in queue_cooker %s' % (env.now,type_of_item,cook_R.queue))
+        cost_of_item=0.0
+        selling_of_item=0
+        time_of_item=0
+        if  type_of_item==1:
+            selling_of_item=2
+            time_of_item=random.randint(1,10)
+        elif type_of_item==2:
+            selling_of_item=4
+            time_of_item=random.randint(10,15)
+        elif type_of_item==3:
+            selling_of_item=5
+            time_of_item=random.randint(10,15)
+        elif type_of_item==4:
+            selling_of_item=8
+            time_of_item=random.randint(20,30)
+        elif type_of_item==5:
+            selling_of_item=10
+            time_of_item=random.randint(20,30)
+        global total_selling    
+        total_selling+=selling_of_item
+        cost_of_item=(selling_of_item*30)/100
+        global total_cost
+        total_cost+=cost_of_item
+        yield env.timeout(time_of_item)
+        print('%s:  item_type %d leave cook : '% (env.now,type_of_item))
+        
+def waiter_gen(i,num_of_customer,env, waiter_R,cook_R,prio):
+    print('%s:  distribution %d number of cus =  %d arriving waiter' % (env.now, i,num_of_customer))
+    with waiter_R.request(priority=prio) as req:
+        print('%s:  distribution %d requesting resource priority= %d' % (env.now,i,prio))
+        yield req
+        if(waiter_R.count==1):
+            global flagw1
+            flagw1+=1
+        elif(waiter_R.count==2):
+            global flagw2
+            flagw2+=1 
+        elif(waiter_R.count==3):
+            global flagw3
+            flagw3+=1            
+        print('%s: waiter num ---->%d ' % (env.now,waiter_R.count))
+        print('%s:  distribution %d entering queue ,priority= %d' % (env.now,i,prio))
+        #random= 43
+        items=[]
+        total_item=0
+        for num in range(num_of_customer):
+            random1 = random.randint(1,99)
+            num_of_item=0
+            if  random1< 26:
+                 num_of_item=1
+            elif random1>25 and random1<66:
+                 num_of_item=2
+            elif random1>65 and random1<91:
+                 num_of_item=3
+            elif random1>90 and random1<100:
+                 num_of_item=4
+    ##############################################
+            total_item+=num_of_item
+            for j in range(num_of_item):
+                random2=random.randint(1,99)
+                type_of_item=0
+                if  random2< 11:
+                    type_of_item=1
+                elif random2>10 and random2<31:
+                    type_of_item=2
+                elif random2>30 and random2<61:
+                    type_of_item=3
+                elif random2>60 and random2<91:
+                    type_of_item=4
+                elif random2>90 and random2<100:
+                    type_of_item=5
+                items.append(type_of_item)
+            print('%s:  distribution %d done order<%d items>. number customer in queue_waiter: %s' % (env.now,i,num_of_item,waiter_R.queue))   
+        yield env.timeout(random.randint(1,4))
+        for k in (items):               
+            env.process(cook_gen(k,env,cook_R))
+
+def Customer_generator(env, waiter_R,cook_R):
+    i=1
+    time_event=720
+    flag_open=1
+    while True:
+        random1=random.randint(1,99)
+        num_of_customer=0
+        if  random1< 31:
+            num_of_customer=1
+        elif random1>30 and random1<71:
+            num_of_customer=2
+        elif random1>70 and random1<91:
+            num_of_customer=3
+        elif random1>90 and random1<100:
+            num_of_customer=4
+        if  flag_open :
+            prio=0        
+            ran=random.randint(1,99)
+            if  ran< 76:
+                prio=1
+            elif ran>75 and ran<100:
+                prio=0
+            env.process(waiter_gen(i,num_of_customer,env, waiter_R,cook_R,prio))
+            print('%s:  distribution %d entering queue'% (env.now,i))
+            i=i+1
+            yield env.timeout(random.randint(0,90)) #randint(0,90)
+        else :
+            global total_cus
+            cus_each_day.append(i-total_cus)
+            total_cus=i
+            global flagw1
+            waiter1.append(flagw1)
+            flagw1=0
+            global flagw2
+            waiter2.append(flagw2)
+            flagw2=0
+            global flagw3
+            waiter3.append(flagw3)
+            flagw3=0
+            print('%s:  Restaurant closesed order clock over 12'% (env.now))
+            yield env.timeout(time_event-env.now)
+       
+        #yield env.timeout(random.randint(0,90)) #randint(0,90)
+        if env.now>=time_event :
+            time_event+=720
+            flag_open=flag_open^1
+            if  flag_open : 
+                print('%s:  Restaurant opened order'% (env.now))
+            
+            
+        
+Waiter_salary=1200
+Cooker_salary=800
+Restaurant_place=2200
+num_of_months=1
+num_of_waiter=3
+num_of_cooker=2
+#Waiter_salary=int(input("Waiter_salary"))
+#Cooker_salary=int(input("Cooker_salary"))
+#Restaurant_place=int(input("Restaurant_place"))
+#num_of_months=int(input("num_of_months"))
+#num_of_waiter=int(input("num_of_waiter"))
+#num_of_cooker=int(input("num_of_cooker"))
+env1 = simpy.Environment()
+# waiter
+waiter_R = simpy.PriorityResource(env1, capacity=num_of_waiter)
+# cook
+cook_R = simpy.Resource(env1, capacity=num_of_cooker)
+# Customers
+cus_gen = env1.process(Customer_generator(env1, waiter_R,cook_R))
+env1.run(60*24*num_of_months*30)
+total_cost+=(Waiter_salary*num_of_waiter*num_of_months)+(Cooker_salary*num_of_cooker*num_of_months)+(Restaurant_place*num_of_months)
+profit=total_selling-total_cost
+Taxes=(profit*14)/100
+earnings=profit-Taxes
+
+print('%s:  total selling = %f'% (env1.now,total_selling/num_of_months))
+print('%s:  total cost = %f'% (env1.now,total_cost/num_of_months))
+print('%s:  total Taxes = %f'% (env1.now,Taxes/num_of_months))
+print('%s:  total profit = %f'% (env1.now,profit/num_of_months))
+print('%s:  total earnings = %f'% (env1.now,earnings/num_of_months))
+con=1
+for k in (cus_each_day):
+    print('  number of customer in Day :%d  = %d'% (con,k))
+    con+=1
+con=1    
+for k in (waiter1):
+    print('  number of group in Day with waiter 2:%d  = %d'% (con,k))
+    con+=1    
