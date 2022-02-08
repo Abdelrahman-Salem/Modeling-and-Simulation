@@ -1,0 +1,2 @@
+# Modeling-and-Simulation
+A businessperson wants to open a restaurant with specific configurations. He wants to make sure that opening the restaurant with these configurations is profitable. Therefore, he asked a software house to make a simulation program for his idea of the restaurant. It was so important to him to calculate the average earnings during the first 5 months. In addition, he wants a complete analysis for how the restaurant resources is being handled.
